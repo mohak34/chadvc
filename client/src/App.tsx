@@ -1,13 +1,17 @@
 import { useEffect } from "react";
 import { useChatStore } from "./stores/chatStore";
+import { useVoiceStore } from "./stores/voiceStore";
 import { wsManager, Message } from "./lib/websocket";
+import { webrtcManager } from "./lib/webrtc";
 import LoginForm from "./components/LoginForm";
 import MessageList from "./components/MessageList";
 import MessageInput from "./components/MessageInput";
 import UserList from "./components/UserList";
+import VoiceControls from "./components/VoiceControls";
 
 function App() {
   const { username, isConnected, setConnected, addMessage, setOnlineUsers } = useChatStore();
+  const { setVoiceUsers } = useVoiceStore();
 
   useEffect(() => {
     if (!username) return;
@@ -30,15 +34,20 @@ function App() {
       }
     });
 
+    const unsubscribeVoice = webrtcManager.onVoiceUsersChange((users) => {
+      setVoiceUsers(users);
+    });
+
     const checkConnection = setInterval(() => {
       setConnected(wsManager.isConnected());
     }, 1000);
 
     return () => {
       unsubscribe();
+      unsubscribeVoice();
       clearInterval(checkConnection);
     };
-  }, [username, addMessage, setOnlineUsers, setConnected]);
+  }, [username, addMessage, setOnlineUsers, setConnected, setVoiceUsers]);
 
   const handleLogin = (username: string) => {
     wsManager.connect(username);
@@ -67,8 +76,11 @@ function App() {
         </div>
       </div>
 
-      <aside className="w-64 bg-gray-800 border-l border-gray-700">
-        <UserList />
+      <aside className="w-64 bg-gray-800 border-l border-gray-700 flex flex-col">
+        <div className="flex-1 overflow-y-auto">
+          <UserList />
+        </div>
+        <VoiceControls />
       </aside>
     </div>
   );

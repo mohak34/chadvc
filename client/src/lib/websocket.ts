@@ -31,9 +31,17 @@ export class WebSocketManager {
   private reconnectDelay = 1000;
   private username: string = "";
 
-  connect(username: string, url: string = "ws://localhost:8080/ws") {
+  connect(username: string, url?: string) {
     this.username = username;
+    
+    if (!url) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      url = `${protocol}//${host}:8080/ws`;
+    }
+    
     const wsUrl = `${url}?username=${encodeURIComponent(username)}`;
+    console.log(`[WebSocket] Connecting to: ${wsUrl}`);
 
     this.ws = new WebSocket(wsUrl);
 
