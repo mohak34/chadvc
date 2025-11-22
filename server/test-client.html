@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChadVC WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border: 1px solid #444;
+        }
+        input {
+            background: #333;
+            color: #fff;
+            width: calc(100% - 22px);
+        }
+        button {
+            background: #0066cc;
+            color: #fff;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #0066cc;
+            padding-left: 10px;
+        }
+        .user-list {
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .connected { background: #004400; }
+        .disconnected { background: #440000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ChadVC WebSocket Test</h1>
+        
+        <div id="status" class="status disconnected">
+            Status: Disconnected
+        </div>
+
+        <div id="login-section">
+            <input type="text" id="username" placeholder="Enter username">
+            <button onclick="connect()">Connect</button>
+        </div>
+
+        <div id="chat-section" style="display: none;">
+            <div class="user-list">
+                <strong>Online Users:</strong>
+                <div id="users"></div>
+            </div>
+
+            <div id="messages"></div>
+
+            <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="disconnect()">Disconnect</button>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let username = '';
+
+        function connect() {
+            username = document.getElementById('username').value.trim();
+            if (!username) {
+                alert('Please enter a username');
+                return;
+            }
+
+            ws = new WebSocket(`ws://localhost:8080/ws?username=${encodeURIComponent(username)}`);
+
+            ws.onopen = () => {
+                document.getElementById('status').textContent = `Status: Connected as ${username}`;
+                document.getElementById('status').className = 'status connected';
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('chat-section').style.display = 'block';
+                addMessage('System', 'Connected to server');
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                addMessage('System', 'Connection error');
+            };
+
+            ws.onclose = () => {
+                document.getElementById('status').textContent = 'Status: Disconnected';
+                document.getElementById('status').className = 'status disconnected';
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('chat-section').style.display = 'none';
+                addMessage('System', 'Disconnected from server');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content || !ws) return;
+
+            const msg = {
+                type: 'message',
+                content: content
+            };
+
+            ws.send(JSON.stringify(msg));
+            input.value = '';
+        }
+
+        function handleMessage(msg) {
+            switch(msg.type) {
+                case 'message':
+                    addMessage(msg.username, msg.content);
+                    break;
+                case 'user_list':
+                    updateUserList(msg.users);
+                    break;
+                case 'user_joined':
+                    addMessage('System', `${msg.username} joined`);
+                    break;
+                case 'user_left':
+                    addMessage('System', `${msg.username} left`);
+                    break;
+                default:
+                    console.log('Unknown message type:', msg);
+            }
+        }
+
+        function addMessage(user, content) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            messageDiv.innerHTML = `<strong>${user}:</strong> ${content}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function updateUserList(users) {
+            const usersDiv = document.getElementById('users');
+            usersDiv.innerHTML = users.map(u => `<div>${u}</div>`).join('');
+        }
+    </script>
+</body>
+</html>
