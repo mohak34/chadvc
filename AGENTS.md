@@ -4,6 +4,7 @@
 - **Go Backend**: `cd server && go run cmd/main.go` (dev), `go build -o chadvc cmd/main.go` (prod)
 - **Go Tests**: `go test ./...` (all), `go test -v ./internal/ws` (single package)
 - **Frontend**: `cd client && bun run tauri dev` (dev), `bun run tauri build` (prod)
+- **Frontend (Nvidia)**: `cd client && WEBKIT_DISABLE_DMABUF_RENDERER=1 bun run tauri dev` (for Nvidia systems)
 - **Lint**: `golangci-lint run` (Go), `bun run lint` (frontend)
 - **IMPORTANT**: Use `bun` for all frontend package management and scripts, NOT npm or node
 - **DO NOT RUN**: Do not run dev servers, build commands, or the app until explicitly requested by the user
