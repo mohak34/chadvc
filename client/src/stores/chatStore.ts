@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { Message } from "../lib/websocket";
+import { Message, HistoryMessage } from "../lib/websocket";
 
 interface ChatMessage {
-  id: string;
+  id: number;
   username: string;
   content: string;
   timestamp: Date;
@@ -14,22 +14,30 @@ interface ChatState {
   messages: ChatMessage[];
   onlineUsers: string[];
   typingUsers: Set<string>;
+  hasMoreMessages: boolean;
+  isLoadingMore: boolean;
 
   setUsername: (username: string) => void;
   setConnected: (connected: boolean) => void;
   addMessage: (message: Message) => void;
+  setMessageHistory: (messages: HistoryMessage[], hasMore: boolean) => void;
+  prependMessages: (messages: HistoryMessage[], hasMore: boolean) => void;
   setOnlineUsers: (users: string[]) => void;
   addTypingUser: (username: string) => void;
   removeTypingUser: (username: string) => void;
   clearMessages: () => void;
+  setLoadingMore: (loading: boolean) => void;
+  getOldestMessageId: () => number | null;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   username: "",
   isConnected: false,
   messages: [],
   onlineUsers: [],
   typingUsers: new Set(),
+  hasMoreMessages: false,
+  isLoadingMore: false,
 
   setUsername: (username) => set({ username }),
 
@@ -38,12 +46,38 @@ export const useChatStore = create<ChatState>((set) => ({
   addMessage: (message) =>
     set((state) => {
       const newMessage: ChatMessage = {
-        id: `${message.username}-${Date.now()}`,
+        id: message.id || Date.now(),
         username: message.username || "System",
         content: message.content || "",
         timestamp: message.timestamp ? new Date(message.timestamp) : new Date(),
       };
       return { messages: [...state.messages, newMessage] };
+    }),
+
+  setMessageHistory: (messages, hasMore) =>
+    set(() => {
+      const chatMessages: ChatMessage[] = messages.map((msg) => ({
+        id: msg.id,
+        username: msg.username,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+      }));
+      return { messages: chatMessages, hasMoreMessages: hasMore };
+    }),
+
+  prependMessages: (messages, hasMore) =>
+    set((state) => {
+      const newMessages: ChatMessage[] = messages.map((msg) => ({
+        id: msg.id,
+        username: msg.username,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+      }));
+      return { 
+        messages: [...newMessages, ...state.messages], 
+        hasMoreMessages: hasMore,
+        isLoadingMore: false,
+      };
     }),
 
   setOnlineUsers: (users) => set({ onlineUsers: users }),
@@ -62,5 +96,13 @@ export const useChatStore = create<ChatState>((set) => ({
       return { typingUsers: newTypingUsers };
     }),
 
-  clearMessages: () => set({ messages: [] }),
+  clearMessages: () => set({ messages: [], hasMoreMessages: false }),
+
+  setLoadingMore: (loading) => set({ isLoadingMore: loading }),
+
+  getOldestMessageId: () => {
+    const state = get();
+    if (state.messages.length === 0) return null;
+    return state.messages[0].id;
+  },
 }));

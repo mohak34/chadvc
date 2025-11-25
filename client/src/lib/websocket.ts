@@ -7,7 +7,16 @@ export type MessageType =
   | "voice_join" 
   | "voice_leave" 
   | "typing" 
-  | "error";
+  | "error"
+  | "message_history"
+  | "load_more";
+
+export interface HistoryMessage {
+  id: number;
+  username: string;
+  content: string;
+  timestamp: string;
+}
 
 export interface Message {
   type: MessageType;
@@ -19,20 +28,32 @@ export interface Message {
   from_user?: string;
   signal?: any;
   error?: string;
+  id?: number;
+  messages?: HistoryMessage[];
+  has_more?: boolean;
+  before_id?: number;
 }
 
 export type MessageHandler = (message: Message) => void;
+export type ConnectionHandler = (connected: boolean) => void;
+export type TokenRefreshHandler = () => Promise<string | null>;
 
 export class WebSocketManager {
   private ws: WebSocket | null = null;
   private messageHandlers: Set<MessageHandler> = new Set();
+  private connectionHandlers: Set<ConnectionHandler> = new Set();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
-  private username: string = "";
+  private token: string = "";
+  private tokenRefreshHandler: TokenRefreshHandler | null = null;
 
-  connect(username: string, url?: string) {
-    this.username = username;
+  setTokenRefreshHandler(handler: TokenRefreshHandler) {
+    this.tokenRefreshHandler = handler;
+  }
+
+  connect(token: string, url?: string) {
+    this.token = token;
     
     if (!url) {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -40,14 +61,15 @@ export class WebSocketManager {
       url = `${protocol}//${host}:8080/ws`;
     }
     
-    const wsUrl = `${url}?username=${encodeURIComponent(username)}`;
-    console.log(`[WebSocket] Connecting to: ${wsUrl}`);
+    const wsUrl = `${url}?token=${encodeURIComponent(token)}`;
+    console.log(`[WebSocket] Connecting with token...`);
 
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
       console.log("WebSocket connected");
       this.reconnectAttempts = 0;
+      this.notifyConnectionHandlers(true);
     };
 
     this.ws.onmessage = (event) => {
@@ -63,9 +85,25 @@ export class WebSocketManager {
       console.error("WebSocket error:", error);
     };
 
-    this.ws.onclose = () => {
-      console.log("WebSocket disconnected");
+    this.ws.onclose = async (event) => {
+      console.log("WebSocket disconnected", event.code, event.reason);
       this.ws = null;
+      this.notifyConnectionHandlers(false);
+      
+      // Check if disconnected due to token expiry (401)
+      if (event.code === 1008 || event.reason?.includes("expired")) {
+        // Try to refresh token
+        if (this.tokenRefreshHandler) {
+          const newToken = await this.tokenRefreshHandler();
+          if (newToken) {
+            this.token = newToken;
+            this.reconnectAttempts = 0;
+            this.attemptReconnect();
+            return;
+          }
+        }
+      }
+      
       this.attemptReconnect();
     };
   }
@@ -76,6 +114,7 @@ export class WebSocketManager {
       this.ws = null;
     }
     this.reconnectAttempts = this.maxReconnectAttempts;
+    this.notifyConnectionHandlers(false);
   }
 
   sendMessage(content: string) {
@@ -114,13 +153,33 @@ export class WebSocketManager {
     this.ws.send(JSON.stringify(message));
   }
 
+  loadMoreMessages(beforeId: number) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+    const message: Message = {
+      type: "load_more",
+      before_id: beforeId,
+    };
+
+    this.ws.send(JSON.stringify(message));
+  }
+
   onMessage(handler: MessageHandler) {
     this.messageHandlers.add(handler);
     return () => this.messageHandlers.delete(handler);
   }
 
+  onConnectionChange(handler: ConnectionHandler) {
+    this.connectionHandlers.add(handler);
+    return () => this.connectionHandlers.delete(handler);
+  }
+
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  private notifyConnectionHandlers(connected: boolean) {
+    this.connectionHandlers.forEach((handler) => handler(connected));
   }
 
   private attemptReconnect() {
@@ -135,8 +194,8 @@ export class WebSocketManager {
     console.log(`Attempting to reconnect in ${delay}ms...`);
 
     setTimeout(() => {
-      if (this.username) {
-        this.connect(this.username);
+      if (this.token) {
+        this.connect(this.token);
       }
     }, delay);
   }

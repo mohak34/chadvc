@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+
+	"github.com/strix/chadvc/internal/auth"
 )
 
 var upgrader = websocket.Upgrader{
@@ -18,23 +20,37 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// HandleWebSocket handles WebSocket upgrade requests
-func HandleWebSocket(hub *Hub) gin.HandlerFunc {
+// HandleWebSocket handles WebSocket upgrade requests with JWT authentication.
+func HandleWebSocket(hub *Hub, authService *auth.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get username from query parameter
-		username := c.Query("username")
-		if username == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "username is required"})
+		// Get token from query parameter
+		token := c.Query("token")
+		if token == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "token is required"})
 			return
 		}
 
-		// Check if username is already taken
+		// Validate token
+		claims, err := authService.ValidateAccessToken(token)
+		if err != nil {
+			if err == auth.ErrExpiredToken {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "token has expired"})
+				return
+			}
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			return
+		}
+
+		username := claims.Username
+		userID := claims.UserID
+
+		// Check if username is already connected
 		hub.mu.RLock()
 		_, exists := hub.clients[username]
 		hub.mu.RUnlock()
 
 		if exists {
-			c.JSON(http.StatusConflict, gin.H{"error": "username already taken"})
+			c.JSON(http.StatusConflict, gin.H{"error": "user already connected"})
 			return
 		}
 
@@ -45,8 +61,8 @@ func HandleWebSocket(hub *Hub) gin.HandlerFunc {
 			return
 		}
 
-		// Create new client
-		client := NewClient(username, conn, hub)
+		// Create new client with user ID
+		client := NewClientWithID(userID, username, conn, hub)
 
 		// Register client with hub
 		hub.register <- client
