@@ -30,6 +30,12 @@ type Client struct {
 	// The username of this client
 	Username string
 
+	// Unique session ID for this connection (supports multi-device)
+	SessionID string
+
+	// Whether this client is in voice channel
+	InVoice bool
+
 	// The websocket connection
 	conn *websocket.Conn
 
@@ -40,25 +46,42 @@ type Client struct {
 	send chan *Message
 }
 
-// NewClient creates a new Client instance (deprecated, use NewClientWithID)
+// NewClient creates a new Client instance (deprecated, use NewClientWithSession)
 func NewClient(username string, conn *websocket.Conn, hub *Hub) *Client {
 	return &Client{
-		UserID:   0,
-		Username: username,
-		conn:     conn,
-		hub:      hub,
-		send:     make(chan *Message, 256),
+		UserID:    0,
+		Username:  username,
+		SessionID: "",
+		InVoice:   false,
+		conn:      conn,
+		hub:       hub,
+		send:      make(chan *Message, 256),
 	}
 }
 
-// NewClientWithID creates a new Client instance with user ID
+// NewClientWithID creates a new Client instance with user ID (deprecated, use NewClientWithSession)
 func NewClientWithID(userID uint, username string, conn *websocket.Conn, hub *Hub) *Client {
 	return &Client{
-		UserID:   userID,
-		Username: username,
-		conn:     conn,
-		hub:      hub,
-		send:     make(chan *Message, 256),
+		UserID:    userID,
+		Username:  username,
+		SessionID: "",
+		InVoice:   false,
+		conn:      conn,
+		hub:       hub,
+		send:      make(chan *Message, 256),
+	}
+}
+
+// NewClientWithSession creates a new Client instance with user ID and session ID
+func NewClientWithSession(userID uint, username string, sessionID string, conn *websocket.Conn, hub *Hub) *Client {
+	return &Client{
+		UserID:    userID,
+		Username:  username,
+		SessionID: sessionID,
+		InVoice:   false,
+		conn:      conn,
+		hub:       hub,
+		send:      make(chan *Message, 256),
 	}
 }
 

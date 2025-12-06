@@ -1,5 +1,5 @@
 import SimplePeer from "simple-peer";
-import { wsManager } from "./websocket";
+import { wsManager, Message } from "./websocket";
 
 export type ConnectionState = "connecting" | "connected" | "failed" | "disconnected";
 
@@ -17,29 +17,82 @@ export class WebRTCManager {
 
   private onStateChangeCallback?: () => void;
   private onVoiceUsersChangeCallback?: (users: string[]) => void;
+  private onVoiceKickedCallback?: (reason: string) => void;
+  private unsubscribeMessage?: () => void;
+  private unsubscribeConnection?: () => void;
 
   constructor() {
     this.setupWebSocketHandlers();
   }
 
   private setupWebSocketHandlers() {
-    wsManager.onMessage((message) => {
+    // Clean up any existing handlers
+    if (this.unsubscribeMessage) {
+      this.unsubscribeMessage();
+    }
+    if (this.unsubscribeConnection) {
+      this.unsubscribeConnection();
+    }
+
+    this.unsubscribeMessage = wsManager.onMessage((message: Message) => {
       if (message.type === "voice_signal") {
         console.log(`[WebRTC] Received voice signal from ${message.from_user}`);
         this.handleVoiceSignal(message.from_user!, message.signal);
-      } else if (message.type === "message" && message.username) {
+      } else if (message.type === "voice_kick") {
+        console.log(`[WebRTC] Kicked from voice: ${message.reason}`);
+        this.handleVoiceKick(message.reason || "unknown");
+      } else if (message.type === "voice_join" && message.username) {
+        // Someone joined voice - if we're in voice, connect to them
         if (this.isInVoiceChannel) {
-          const content = message.content || "";
-          if (content.includes("joined voice")) {
-            console.log(`[WebRTC] ${message.username} joined voice, initiating connection`);
-            this.connectToPeer(message.username, true);
-          }
+          console.log(`[WebRTC] ${message.username} joined voice, initiating connection`);
+          this.connectToPeer(message.username, true);
         }
+      } else if (message.type === "voice_leave" && message.username) {
+        console.log(`[WebRTC] ${message.username} left voice, removing peer`);
+        this.removePeer(message.username);
       } else if (message.type === "user_left" && message.username) {
-        console.log(`[WebRTC] ${message.username} left, removing peer`);
+        console.log(`[WebRTC] ${message.username} disconnected, removing peer`);
         this.removePeer(message.username);
       }
     });
+
+    // Handle WebSocket disconnection - clean up voice state
+    this.unsubscribeConnection = wsManager.onConnectionChange((connected) => {
+      if (!connected && this.isInVoiceChannel) {
+        console.log("[WebRTC] WebSocket disconnected, cleaning up voice state");
+        this.cleanupVoiceState();
+      }
+    });
+  }
+
+  // Clean up voice state without sending messages (used when WS disconnects)
+  private cleanupVoiceState() {
+    if (this.localStream) {
+      this.localStream.getTracks().forEach((track) => track.stop());
+      this.localStream = null;
+    }
+
+    this.peers.forEach((connection) => {
+      connection.peer.destroy();
+    });
+    this.peers.clear();
+
+    this.isInVoiceChannel = false;
+    this.isMuted = false;
+    this.notifyStateChange();
+    this.notifyVoiceUsersChange();
+  }
+
+  private handleVoiceKick(reason: string) {
+    console.log(`[WebRTC] Handling voice kick: ${reason}`);
+    
+    // Clean up voice state
+    this.cleanupVoiceState();
+
+    // Notify callback
+    if (this.onVoiceKickedCallback) {
+      this.onVoiceKickedCallback(reason);
+    }
   }
 
   async joinVoiceChannel(voiceUsers: string[]): Promise<void> {
@@ -63,8 +116,8 @@ export class WebRTCManager {
       this.isInVoiceChannel = true;
       this.notifyStateChange();
 
-      console.log("[WebRTC] Broadcasting 'joined voice' message");
-      wsManager.sendMessage("joined voice");
+      // Send voice_join message to server
+      wsManager.sendVoiceJoin();
 
       console.log("[WebRTC] Voice users to connect to:", voiceUsers);
       for (const username of voiceUsers) {
@@ -74,7 +127,7 @@ export class WebRTCManager {
     } catch (error) {
       console.error("Failed to get microphone access:", error);
       if (error instanceof DOMException && error.name === "NotAllowedError") {
-        throw new Error("Microphone access denied. On Linux, please check system settings or install 'pavucontrol' to unmute input.");
+        throw new Error("Microphone access denied. Please check your browser permissions.");
       }
       throw new Error("Microphone access failed");
     }
@@ -83,21 +136,11 @@ export class WebRTCManager {
   leaveVoiceChannel(): void {
     if (!this.isInVoiceChannel) return;
 
-    if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => track.stop());
-      this.localStream = null;
-    }
+    // Send voice_leave message to server
+    wsManager.sendVoiceLeave();
 
-    this.peers.forEach((connection) => {
-      connection.peer.destroy();
-    });
-    this.peers.clear();
-
-    this.isInVoiceChannel = false;
-    this.notifyStateChange();
-    this.notifyVoiceUsersChange();
-
-    wsManager.sendMessage("left voice");
+    // Clean up local state
+    this.cleanupVoiceState();
   }
 
   toggleMute(): boolean {
@@ -150,7 +193,7 @@ export class WebRTCManager {
     });
 
     peer.on("stream", (stream) => {
-      console.log(`[WebRTC] ✓ Received stream from ${username}`);
+      console.log(`[WebRTC] Received stream from ${username}`);
       connection.stream = stream;
       connection.state = "connected";
       this.notifyStateChange();
@@ -159,18 +202,18 @@ export class WebRTCManager {
       const audio = new Audio();
       audio.srcObject = stream;
       audio.play()
-        .then(() => console.log(`[WebRTC] ✓ Playing audio from ${username}`))
-        .catch((err) => console.error(`[WebRTC] ✗ Error playing audio from ${username}:`, err));
+        .then(() => console.log(`[WebRTC] Playing audio from ${username}`))
+        .catch((err) => console.error(`[WebRTC] Error playing audio from ${username}:`, err));
     });
 
     peer.on("connect", () => {
-      console.log(`[WebRTC] ✓ Connected to ${username}`);
+      console.log(`[WebRTC] Connected to ${username}`);
       connection.state = "connected";
       this.notifyStateChange();
     });
 
     peer.on("error", (err) => {
-      console.error(`[WebRTC] ✗ Peer connection error with ${username}:`, err);
+      console.error(`[WebRTC] Peer connection error with ${username}:`, err);
       connection.state = "failed";
       this.notifyStateChange();
     });
@@ -185,6 +228,11 @@ export class WebRTCManager {
   }
 
   private handleVoiceSignal(fromUser: string, signal: any): void {
+    if (!this.isInVoiceChannel) {
+      console.log(`[WebRTC] Ignoring signal from ${fromUser} - not in voice channel`);
+      return;
+    }
+
     console.log(`[WebRTC] Processing signal from ${fromUser}`, signal.type);
     let connection = this.peers.get(fromUser);
 
@@ -197,9 +245,9 @@ export class WebRTCManager {
     if (connection) {
       try {
         connection.peer.signal(signal);
-        console.log(`[WebRTC] ✓ Signal processed for ${fromUser}`);
+        console.log(`[WebRTC] Signal processed for ${fromUser}`);
       } catch (err) {
-        console.error(`[WebRTC] ✗ Error processing signal from ${fromUser}:`, err);
+        console.error(`[WebRTC] Error processing signal from ${fromUser}:`, err);
       }
     }
   }
@@ -246,6 +294,13 @@ export class WebRTCManager {
     };
   }
 
+  onVoiceKicked(callback: (reason: string) => void): () => void {
+    this.onVoiceKickedCallback = callback;
+    return () => {
+      this.onVoiceKickedCallback = undefined;
+    };
+  }
+
   private notifyStateChange(): void {
     if (this.onStateChangeCallback) {
       this.onStateChangeCallback();
@@ -256,6 +311,11 @@ export class WebRTCManager {
     if (this.onVoiceUsersChangeCallback) {
       this.onVoiceUsersChangeCallback(this.getVoiceUsers());
     }
+  }
+
+  // Reset manager state (called on logout)
+  reset(): void {
+    this.cleanupVoiceState();
   }
 }
 

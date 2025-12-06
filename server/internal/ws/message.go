@@ -13,6 +13,7 @@ const (
 	MessageTypeVoiceSignal    MessageType = "voice_signal"
 	MessageTypeVoiceJoin      MessageType = "voice_join"
 	MessageTypeVoiceLeave     MessageType = "voice_leave"
+	MessageTypeVoiceKick      MessageType = "voice_kick"
 	MessageTypeTyping         MessageType = "typing"
 	MessageTypeError          MessageType = "error"
 	MessageTypeMessageHistory MessageType = "message_history"
@@ -49,6 +50,13 @@ type Message struct {
 	ToUser   string `json:"to_user,omitempty"`
 	FromUser string `json:"from_user,omitempty"`
 	Signal   any    `json:"signal,omitempty"`
+
+	// Session ID for multi-device support
+	SessionID   string `json:"session_id,omitempty"`
+	ToSessionID string `json:"to_session_id,omitempty"`
+
+	// Voice kick reason
+	Reason string `json:"reason,omitempty"`
 
 	// Error field
 	Error string `json:"error,omitempty"`

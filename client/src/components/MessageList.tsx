@@ -1,7 +1,14 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useChatStore } from "../stores/chatStore";
-import { wsManager, Message } from "../lib/websocket";
+import { wsManager } from "../lib/websocket";
 import { getAvatarColor, getAvatarInitial, isMoreThan30MinutesApart } from "../lib/avatar";
+
+interface ChatMessage {
+  id: number;
+  username: string;
+  content: string;
+  timestamp: Date;
+}
 
 function formatTimestamp(date: Date): string {
   const now = new Date();
@@ -24,8 +31,8 @@ function formatTimestamp(date: Date): string {
 
 // Determine if we should show the message header (avatar + username + timestamp)
 function shouldShowHeader(
-  currentMsg: Message,
-  prevMsg: Message | null
+  currentMsg: ChatMessage,
+  prevMsg: ChatMessage | null
 ): boolean {
   // Always show header for first message
   if (!prevMsg) return true;

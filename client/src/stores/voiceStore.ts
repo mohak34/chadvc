@@ -7,12 +7,14 @@ interface VoiceState {
   voiceUsers: string[];
   connectionStates: Map<string, ConnectionState>;
   error: string | null;
+  kickReason: string | null;
 
   setInVoiceChannel: (inChannel: boolean) => void;
   setMuted: (muted: boolean) => void;
   setVoiceUsers: (users: string[]) => void;
   setConnectionState: (username: string, state: ConnectionState) => void;
   setError: (error: string | null) => void;
+  setKickReason: (reason: string | null) => void;
   reset: () => void;
 }
 
@@ -22,6 +24,7 @@ export const useVoiceStore = create<VoiceState>((set) => ({
   voiceUsers: [],
   connectionStates: new Map(),
   error: null,
+  kickReason: null,
 
   setInVoiceChannel: (inChannel) => set({ isInVoiceChannel: inChannel }),
 
@@ -38,6 +41,8 @@ export const useVoiceStore = create<VoiceState>((set) => ({
 
   setError: (error) => set({ error }),
 
+  setKickReason: (reason) => set({ kickReason: reason }),
+
   reset: () =>
     set({
       isInVoiceChannel: false,
@@ -45,5 +50,6 @@ export const useVoiceStore = create<VoiceState>((set) => ({
       voiceUsers: [],
       connectionStates: new Map(),
       error: null,
+      kickReason: null,
     }),
 }));

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Message, HistoryMessage } from "../lib/websocket";
+import { Message, HistoryMessage, PendingMessage } from "../lib/websocket";
 
 interface ChatMessage {
   id: number;
@@ -11,14 +11,19 @@ interface ChatMessage {
 interface ChatState {
   username: string;
   isConnected: boolean;
+  isReconnecting: boolean;
+  reconnectAttempt: number;
   messages: ChatMessage[];
   onlineUsers: string[];
   typingUsers: Set<string>;
   hasMoreMessages: boolean;
   isLoadingMore: boolean;
+  pendingMessages: PendingMessage[];
+  showConnectionBanner: boolean;
 
   setUsername: (username: string) => void;
   setConnected: (connected: boolean) => void;
+  setReconnecting: (reconnecting: boolean, attempt?: number) => void;
   addMessage: (message: Message) => void;
   setMessageHistory: (messages: HistoryMessage[], hasMore: boolean) => void;
   prependMessages: (messages: HistoryMessage[], hasMore: boolean) => void;
@@ -28,20 +33,40 @@ interface ChatState {
   clearMessages: () => void;
   setLoadingMore: (loading: boolean) => void;
   getOldestMessageId: () => number | null;
+  setPendingMessages: (messages: PendingMessage[]) => void;
+  setShowConnectionBanner: (show: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   username: "",
   isConnected: false,
+  isReconnecting: false,
+  reconnectAttempt: 0,
   messages: [],
   onlineUsers: [],
   typingUsers: new Set(),
   hasMoreMessages: false,
   isLoadingMore: false,
+  pendingMessages: [],
+  showConnectionBanner: false,
 
   setUsername: (username) => set({ username }),
 
-  setConnected: (connected) => set({ isConnected: connected }),
+  setConnected: (connected) => {
+    set({ 
+      isConnected: connected,
+      isReconnecting: false,
+      reconnectAttempt: 0,
+      // Hide banner when connected
+      showConnectionBanner: !connected && get().showConnectionBanner,
+    });
+  },
+
+  setReconnecting: (reconnecting, attempt = 0) => set({ 
+    isReconnecting: reconnecting, 
+    reconnectAttempt: attempt,
+    showConnectionBanner: reconnecting,
+  }),
 
   addMessage: (message) =>
     set((state) => {
@@ -73,8 +98,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         content: msg.content,
         timestamp: new Date(msg.timestamp),
       }));
-      return { 
-        messages: [...newMessages, ...state.messages], 
+      return {
+        messages: [...newMessages, ...state.messages],
         hasMoreMessages: hasMore,
         isLoadingMore: false,
       };
@@ -105,4 +130,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (state.messages.length === 0) return null;
     return state.messages[0].id;
   },
+
+  setPendingMessages: (messages) => set({ pendingMessages: messages }),
+
+  setShowConnectionBanner: (show) => set({ showConnectionBanner: show }),
 }));

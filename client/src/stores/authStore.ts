@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { clearSessionId } from "../lib/session";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -21,12 +22,14 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isValidating: boolean;
   error: string | null;
 
   register: (username: string, email: string, password: string) => Promise<boolean>;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<boolean>;
+  validateSession: () => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -38,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isValidating: false,
       error: null,
 
       register: async (username: string, email: string, password: string) => {
@@ -125,6 +129,9 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error("Logout error:", error);
         } finally {
+          // Clear session ID
+          clearSessionId();
+          
           set({
             user: null,
             accessToken: null,
@@ -153,6 +160,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (!response.ok) {
             // Refresh token is invalid, logout
+            clearSessionId();
             set({
               user: null,
               accessToken: null,
@@ -173,6 +181,60 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error("Token refresh error:", error);
           return false;
+        }
+      },
+
+      // Validate the current session on app load
+      // This tries to refresh the token to ensure we have a valid session
+      validateSession: async () => {
+        const { refreshToken, isAuthenticated } = get();
+        
+        // If not authenticated, nothing to validate
+        if (!isAuthenticated || !refreshToken) {
+          return false;
+        }
+
+        set({ isValidating: true });
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          });
+
+          if (!response.ok) {
+            // Session is invalid, clear auth state
+            console.log("[Auth] Session validation failed, logging out");
+            clearSessionId();
+            set({
+              user: null,
+              accessToken: null,
+              refreshToken: null,
+              isAuthenticated: false,
+              isValidating: false,
+            });
+            return false;
+          }
+
+          const data: AuthResponse = await response.json();
+          set({
+            user: data.user,
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token,
+            isAuthenticated: true,
+            isValidating: false,
+          });
+          console.log("[Auth] Session validated successfully");
+          return true;
+        } catch (error) {
+          console.error("[Auth] Session validation error:", error);
+          // Network error - keep current state but mark as not validating
+          set({ isValidating: false });
+          // Return true to allow offline usage with cached tokens
+          return true;
         }
       },
 

@@ -30,6 +30,13 @@ func HandleWebSocket(hub *Hub, authService *auth.Service) gin.HandlerFunc {
 			return
 		}
 
+		// Get session ID from query parameter (for multi-device support)
+		sessionID := c.Query("session_id")
+		if sessionID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "session_id is required"})
+			return
+		}
+
 		// Validate token
 		claims, err := authService.ValidateAccessToken(token)
 		if err != nil {
@@ -44,15 +51,16 @@ func HandleWebSocket(hub *Hub, authService *auth.Service) gin.HandlerFunc {
 		username := claims.Username
 		userID := claims.UserID
 
-		// Check if username is already connected
+		// Check if this specific session is already connected
 		hub.mu.RLock()
-		_, exists := hub.clients[username]
-		hub.mu.RUnlock()
-
-		if exists {
-			c.JSON(http.StatusConflict, gin.H{"error": "user already connected"})
-			return
+		if sessions, ok := hub.clients[username]; ok {
+			if _, exists := sessions[sessionID]; exists {
+				hub.mu.RUnlock()
+				c.JSON(http.StatusConflict, gin.H{"error": "session already connected"})
+				return
+			}
 		}
+		hub.mu.RUnlock()
 
 		// Upgrade HTTP connection to WebSocket
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -61,8 +69,8 @@ func HandleWebSocket(hub *Hub, authService *auth.Service) gin.HandlerFunc {
 			return
 		}
 
-		// Create new client with user ID
-		client := NewClientWithID(userID, username, conn, hub)
+		// Create new client with session ID
+		client := NewClientWithSession(userID, username, sessionID, conn, hub)
 
 		// Register client with hub
 		hub.register <- client

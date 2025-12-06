@@ -9,8 +9,9 @@ import (
 
 // Hub maintains the set of active clients and broadcasts messages to them
 type Hub struct {
-	// Registered clients mapped by username
-	clients map[string]*Client
+	// Registered clients mapped by username -> sessionID -> client
+	// This allows multiple sessions (devices) per user
+	clients map[string]map[string]*Client
 
 	// Inbound messages from clients
 	broadcast chan *Message
@@ -26,16 +27,21 @@ type Hub struct {
 
 	// Message service for persistence
 	messageService *message.Service
+
+	// Track which sessions are in voice (username -> sessionID)
+	voiceSessions map[string]string
+	voiceMu       sync.RWMutex
 }
 
 // NewHub creates a new Hub instance
 func NewHub(messageService *message.Service) *Hub {
 	return &Hub{
-		clients:        make(map[string]*Client),
+		clients:        make(map[string]map[string]*Client),
 		broadcast:      make(chan *Message),
 		register:       make(chan *Client),
 		unregister:     make(chan *Client),
 		messageService: messageService,
+		voiceSessions:  make(map[string]string),
 	}
 }
 
@@ -45,38 +51,68 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
-			h.clients[client.Username] = client
+			// Initialize user's session map if not exists
+			if h.clients[client.Username] == nil {
+				h.clients[client.Username] = make(map[string]*Client)
+			}
+			h.clients[client.Username][client.SessionID] = client
+			sessionCount := len(h.clients[client.Username])
+			totalUsers := len(h.clients)
 			h.mu.Unlock()
-			log.Printf("Client registered: %s (Total: %d)", client.Username, len(h.clients))
+
+			log.Printf("Client registered: %s (session: %s, user sessions: %d, total users: %d)",
+				client.Username, client.SessionID, sessionCount, totalUsers)
 
 			// Send message history to the new client
 			h.sendMessageHistory(client)
 
-			// Notify all clients about the new user
+			// Notify all clients about the updated user list
 			h.broadcastUserList()
 
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if _, ok := h.clients[client.Username]; ok {
-				delete(h.clients, client.Username)
-				close(client.send)
-				log.Printf("Client unregistered: %s (Total: %d)", client.Username, len(h.clients))
+			if sessions, ok := h.clients[client.Username]; ok {
+				if _, exists := sessions[client.SessionID]; exists {
+					delete(sessions, client.SessionID)
+					close(client.send)
+
+					// If no more sessions for this user, remove the user entry
+					if len(sessions) == 0 {
+						delete(h.clients, client.Username)
+					}
+
+					log.Printf("Client unregistered: %s (session: %s, remaining sessions: %d)",
+						client.Username, client.SessionID, len(sessions))
+				}
 			}
 			h.mu.Unlock()
+
+			// Clean up voice session if this client was in voice
+			h.voiceMu.Lock()
+			if voiceSession, ok := h.voiceSessions[client.Username]; ok && voiceSession == client.SessionID {
+				delete(h.voiceSessions, client.Username)
+				client.InVoice = false
+			}
+			h.voiceMu.Unlock()
 
 			// Notify all clients about user leaving
 			h.broadcastUserList()
 
 		case message := <-h.broadcast:
 			h.mu.RLock()
-			for username, client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					// Client's send buffer is full, disconnect them
-					close(client.send)
-					delete(h.clients, username)
-					log.Printf("Client disconnected due to full buffer: %s", username)
+			for username, sessions := range h.clients {
+				for sessionID, client := range sessions {
+					select {
+					case client.send <- message:
+					default:
+						// Client's send buffer is full, mark for disconnect
+						close(client.send)
+						delete(sessions, sessionID)
+						if len(sessions) == 0 {
+							delete(h.clients, username)
+						}
+						log.Printf("Client disconnected due to full buffer: %s (session: %s)", username, sessionID)
+					}
 				}
 			}
 			h.mu.RUnlock()
@@ -188,6 +224,7 @@ func (h *Hub) GetMessagesBefore(beforeID uint, limit int) ([]HistoryMessage, boo
 // broadcastUserList sends the current user list to all clients
 func (h *Hub) broadcastUserList() {
 	h.mu.RLock()
+	// Get unique usernames (not sessions)
 	usernames := make([]string, 0, len(h.clients))
 	for username := range h.clients {
 		usernames = append(usernames, username)
@@ -200,10 +237,12 @@ func (h *Hub) broadcastUserList() {
 	}
 
 	h.mu.RLock()
-	for _, client := range h.clients {
-		select {
-		case client.send <- message:
-		default:
+	for _, sessions := range h.clients {
+		for _, client := range sessions {
+			select {
+			case client.send <- message:
+			default:
+			}
 		}
 	}
 	h.mu.RUnlock()
@@ -219,4 +258,113 @@ func (h *Hub) GetOnlineUsers() []string {
 		usernames = append(usernames, username)
 	}
 	return usernames
+}
+
+// GetClient returns a specific client by username and sessionID
+func (h *Hub) GetClient(username, sessionID string) *Client {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if sessions, ok := h.clients[username]; ok {
+		return sessions[sessionID]
+	}
+	return nil
+}
+
+// GetUserSessions returns all sessions for a user
+func (h *Hub) GetUserSessions(username string) []*Client {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	var clients []*Client
+	if sessions, ok := h.clients[username]; ok {
+		for _, client := range sessions {
+			clients = append(clients, client)
+		}
+	}
+	return clients
+}
+
+// SendToUser sends a message to all sessions of a user
+func (h *Hub) SendToUser(username string, msg *Message) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if sessions, ok := h.clients[username]; ok {
+		for _, client := range sessions {
+			select {
+			case client.send <- msg:
+			default:
+			}
+		}
+	}
+}
+
+// SendToSession sends a message to a specific session
+func (h *Hub) SendToSession(username, sessionID string, msg *Message) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if sessions, ok := h.clients[username]; ok {
+		if client, exists := sessions[sessionID]; exists {
+			select {
+			case client.send <- msg:
+			default:
+			}
+		}
+	}
+}
+
+// SetVoiceSession marks a user's session as being in voice, disconnecting other sessions
+func (h *Hub) SetVoiceSession(username, sessionID string) *Client {
+	h.voiceMu.Lock()
+	defer h.voiceMu.Unlock()
+
+	// Check if user already has another session in voice
+	if existingSessionID, ok := h.voiceSessions[username]; ok && existingSessionID != sessionID {
+		// Get the existing client and kick them from voice
+		h.mu.RLock()
+		if sessions, ok := h.clients[username]; ok {
+			if existingClient, exists := sessions[existingSessionID]; exists {
+				existingClient.InVoice = false
+				h.mu.RUnlock()
+
+				// Return the client that needs to be kicked
+				h.voiceSessions[username] = sessionID
+				return existingClient
+			}
+		}
+		h.mu.RUnlock()
+	}
+
+	// Set the new voice session
+	h.voiceSessions[username] = sessionID
+	return nil
+}
+
+// ClearVoiceSession removes a user's voice session
+func (h *Hub) ClearVoiceSession(username, sessionID string) {
+	h.voiceMu.Lock()
+	defer h.voiceMu.Unlock()
+
+	if existingSessionID, ok := h.voiceSessions[username]; ok && existingSessionID == sessionID {
+		delete(h.voiceSessions, username)
+	}
+}
+
+// IsInVoice checks if a user has any session in voice
+func (h *Hub) IsInVoice(username string) bool {
+	h.voiceMu.RLock()
+	defer h.voiceMu.RUnlock()
+
+	_, ok := h.voiceSessions[username]
+	return ok
+}
+
+// GetVoiceSessionID returns the session ID of the user's voice session
+func (h *Hub) GetVoiceSessionID(username string) string {
+	h.voiceMu.RLock()
+	defer h.voiceMu.RUnlock()
+
+	return h.voiceSessions[username]
 }
