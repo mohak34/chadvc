@@ -106,18 +106,13 @@ func (c *Client) ReadPump() {
 			c.handleLoadMore(msg.BeforeID)
 
 		case MessageTypeVoiceSignal:
-			// Route voice signal to specific user
-			c.routeVoiceSignal(&msg)
+			c.HandleVoiceSignal(&msg)
 
 		case MessageTypeVoiceJoin:
-			// Broadcast voice join notification
-			msg.Type = MessageTypeVoiceJoin
-			c.hub.broadcast <- &msg
+			c.HandleVoiceJoin(&msg)
 
 		case MessageTypeVoiceLeave:
-			// Broadcast voice leave notification
-			msg.Type = MessageTypeVoiceLeave
-			c.hub.broadcast <- &msg
+			c.HandleVoiceLeave(&msg)
 
 		case MessageTypeTyping:
 			// Broadcast typing indicator
@@ -167,26 +162,6 @@ func (c *Client) WritePump() {
 				return
 			}
 		}
-	}
-}
-
-// routeVoiceSignal sends a voice signal to a specific user
-func (c *Client) routeVoiceSignal(msg *Message) {
-	c.hub.mu.RLock()
-	targetClient, exists := c.hub.clients[msg.ToUser]
-	c.hub.mu.RUnlock()
-
-	if !exists {
-		log.Printf("Target user not found: %s", msg.ToUser)
-		return
-	}
-
-	// Forward the signal to the target user
-	msg.FromUser = c.Username
-	select {
-	case targetClient.send <- msg:
-	default:
-		log.Printf("Failed to send voice signal to %s", msg.ToUser)
 	}
 }
 
