@@ -1,5 +1,40 @@
 @import 'tailwindcss';
 
+@theme {
+  /* Custom ChadVC theme palette - Discord-like dark theme */
+  --color-chad-bg-darkest: #0e0f14;
+  --color-chad-bg-dark: #13141a;
+  --color-chad-bg: #1a1b23;
+  --color-chad-bg-light: #1e2029;
+  --color-chad-bg-hover: #26282f;
+  
+  --color-chad-grape: #5D536B;
+  --color-chad-grape-light: #6d6379;
+  
+  --color-chad-lavender: #7D6B91;
+  --color-chad-lavender-light: #8d7ba1;
+  
+  --color-chad-platinum: #dcddde;
+  
+  --color-chad-steel: #A3BAC3;
+  --color-chad-steel-dark: #8aa3ad;
+  --color-chad-steel-light: #b8cad2;
+  
+  --color-chad-border: #2a2c33;
+  --color-chad-muted: #72767d;
+  
+  /* Avatar colors for deterministic assignment */
+  --color-avatar-red: #f04747;
+  --color-avatar-orange: #faa61a;
+  --color-avatar-yellow: #f9c83c;
+  --color-avatar-green: #43b581;
+  --color-avatar-teal: #1abc9c;
+  --color-avatar-blue: #3498db;
+  --color-avatar-purple: #9b59b6;
+  --color-avatar-pink: #e91e63;
+  --color-avatar-indigo: #7289da;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -11,10 +46,16 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4B5563; /* gray-600 */
+  background: #1e2029;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6B7280; /* gray-500 */
+  background: #2a2c33;
+}
+
+/* Selection color */
+::selection {
+  background: #7D6B91;
+  color: #EAEBED;
 }

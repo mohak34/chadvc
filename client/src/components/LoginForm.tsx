@@ -68,17 +68,19 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const displayError = localError || error;
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-8">
-      <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h1 className="text-3xl font-bold mb-2 text-white">ChadVC</h1>
-        <p className="text-gray-400 mb-6">
-          {isRegister ? "Create an account to get started" : "Sign in to continue"}
-        </p>
+    <div className="min-h-screen bg-chad-bg-darkest flex items-center justify-center p-8">
+      <div className="bg-chad-bg-dark p-8 rounded-lg shadow-2xl w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-chad-platinum">Welcome to ChadVC</h1>
+          <p className="text-chad-muted mt-2 text-sm">
+            {isRegister ? "Create an account to get started" : "Sign in to continue"}
+          </p>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isRegister && (
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="username" className="block text-xs font-medium text-chad-muted uppercase mb-2">
                 Username
               </label>
               <input
@@ -87,14 +89,14 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter username"
-                className="w-full px-4 py-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-white"
+                className="w-full px-3 py-2.5 bg-chad-bg-darkest rounded border-none focus:ring-2 focus:ring-chad-lavender focus:outline-none text-chad-platinum placeholder-chad-muted text-sm"
                 disabled={isLoading}
               />
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="email" className="block text-xs font-medium text-chad-muted uppercase mb-2">
               Email
             </label>
             <input
@@ -103,13 +105,13 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter email"
-              className="w-full px-4 py-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-white"
+              className="w-full px-3 py-2.5 bg-chad-bg-darkest rounded border-none focus:ring-2 focus:ring-chad-lavender focus:outline-none text-chad-platinum placeholder-chad-muted text-sm"
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="password" className="block text-xs font-medium text-chad-muted uppercase mb-2">
               Password
             </label>
             <input
@@ -118,14 +120,14 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
-              className="w-full px-4 py-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-white"
+              className="w-full px-3 py-2.5 bg-chad-bg-darkest rounded border-none focus:ring-2 focus:ring-chad-lavender focus:outline-none text-chad-platinum placeholder-chad-muted text-sm"
               disabled={isLoading}
             />
           </div>
 
           {isRegister && (
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="confirmPassword" className="block text-xs font-medium text-chad-muted uppercase mb-2">
                 Confirm Password
               </label>
               <input
@@ -134,14 +136,14 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm password"
-                className="w-full px-4 py-3 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-white"
+                className="w-full px-3 py-2.5 bg-chad-bg-darkest rounded border-none focus:ring-2 focus:ring-chad-lavender focus:outline-none text-chad-platinum placeholder-chad-muted text-sm"
                 disabled={isLoading}
               />
             </div>
           )}
 
           {displayError && (
-            <div className="text-red-500 text-sm bg-red-500/10 px-4 py-2 rounded-lg">
+            <div className="text-red-400 text-sm bg-red-500/10 px-3 py-2 rounded">
               {displayError}
             </div>
           )}
@@ -149,25 +151,25 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+            className="w-full px-4 py-2.5 bg-chad-lavender hover:bg-chad-lavender-light disabled:opacity-50 disabled:cursor-not-allowed rounded font-medium transition-colors text-white text-sm"
           >
             {isLoading ? "Loading..." : isRegister ? "Create Account" : "Sign In"}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <button
             onClick={toggleMode}
             disabled={isLoading}
-            className="text-blue-400 hover:text-blue-300 text-sm disabled:cursor-not-allowed"
+            className="text-chad-steel hover:text-chad-steel-light text-sm disabled:cursor-not-allowed transition-colors"
           >
             {isRegister
               ? "Already have an account? Sign in"
-              : "Don't have an account? Create one"}
+              : "Need an account? Register"}
           </button>
         </div>
 
-        <div className="mt-6 text-sm text-gray-500 text-center">
+        <div className="mt-6 text-xs text-chad-muted text-center">
           Make sure the server is running on localhost:8080
         </div>
       </div>

@@ -19,21 +19,24 @@ export default function MessageInput() {
   };
 
   return (
-    <div className="p-4 bg-gray-800 border-t border-gray-700">
-      <div className="flex gap-2">
+    <div className="px-4 pb-6 pt-2">
+      <div className="flex items-center bg-chad-bg rounded-lg">
         <input
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyPress={handleKeyPress}
-          placeholder="Type a message..."
-          className="flex-1 px-4 py-2 bg-gray-700 rounded-lg border border-gray-600 focus:border-blue-500 focus:outline-none text-white"
+          placeholder="Message #general"
+          className="flex-1 px-4 py-3 bg-transparent focus:outline-none text-chad-platinum placeholder-chad-muted"
         />
         <button
           onClick={handleSend}
-          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors"
+          disabled={!message.trim()}
+          className="px-4 py-2 mr-2 text-chad-muted hover:text-chad-platinum disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          Send
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+          </svg>
         </button>
       </div>
     </div>
