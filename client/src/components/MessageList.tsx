@@ -5,7 +5,7 @@ import { wsManager } from "../lib/websocket";
 function formatTimestamp(date: Date): string {
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
-  
+
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday = date.toDateString() === yesterday.toDateString();
@@ -28,16 +28,18 @@ export default function MessageList() {
   const isLoadingMore = useChatStore((state) => state.isLoadingMore);
   const setLoadingMore = useChatStore((state) => state.setLoadingMore);
   const getOldestMessageId = useChatStore((state) => state.getOldestMessageId);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(messages.length);
   const prevScrollHeightRef = useRef(0);
 
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   // Handle scroll to load more messages
   const handleLoadMore = useCallback(() => {
     if (isLoadingMore || !hasMoreMessages) return;
-    
+
     const oldestId = getOldestMessageId();
     if (oldestId === null) return;
 
@@ -70,31 +72,41 @@ export default function MessageList() {
 
   // Maintain scroll position when prepending messages
   useEffect(() => {
+    // Helper to scroll to bottom reliably
+    const scrollToBottom = () => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
     if (containerRef.current && messages.length > prevMessagesLengthRef.current) {
       const isInitialLoad = prevMessagesLengthRef.current === 0;
       const isPrepend = messages.length - prevMessagesLengthRef.current > 1;
-      
-      if (isInitialLoad) {
-        // Scroll to bottom on initial load
-        containerRef.current.scrollTop = containerRef.current.scrollHeight;
-      } else if (isPrepend && prevScrollHeightRef.current > 0) {
-        // Maintain scroll position when prepending
-        const newScrollHeight = containerRef.current.scrollHeight;
-        const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
-        containerRef.current.scrollTop = scrollDiff;
-      } else {
-        // Scroll to bottom for new messages
-        containerRef.current.scrollTop = containerRef.current.scrollHeight;
-      }
+
+      // Use requestAnimationFrame to ensure DOM has updated with new messages
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          if (isInitialLoad) {
+            // Scroll to bottom on initial load (instant)
+            bottomRef.current?.scrollIntoView({ behavior: "auto" });
+          } else if (isPrepend && prevScrollHeightRef.current > 0) {
+            // Maintain scroll position when prepending
+            const newScrollHeight = containerRef.current.scrollHeight;
+            const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
+            containerRef.current.scrollTop = scrollDiff;
+          } else {
+            // Scroll to bottom for new messages
+            scrollToBottom();
+          }
+        }
+      });
     }
     prevMessagesLengthRef.current = messages.length;
   }, [messages]);
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+    <div ref={containerRef} className="flex-1 overflow-y-auto p-4 space-y-2 h-full">
       {/* Top sentinel for infinite scroll */}
       <div ref={topSentinelRef} className="h-1" />
-      
+
       {/* Loading indicator */}
       {isLoadingMore && (
         <div className="flex justify-center py-2">
@@ -117,13 +129,12 @@ export default function MessageList() {
         messages.map((msg) => (
           <div
             key={msg.id}
-            className={`p-3 rounded-lg ${
-              msg.username === username
-                ? "bg-blue-600 ml-auto max-w-md"
-                : msg.username === "System"
+            className={`p-3 rounded-lg ${msg.username === username
+              ? "bg-blue-600 ml-auto max-w-md"
+              : msg.username === "System"
                 ? "bg-gray-700 text-center text-sm text-gray-400"
                 : "bg-gray-800 max-w-md"
-            }`}
+              }`}
           >
             {msg.username !== "System" && (
               <div className="flex items-center gap-2 mb-1">
@@ -144,6 +155,8 @@ export default function MessageList() {
           </div>
         ))
       )}
+      {/* Bottom sentinel for auto-scroll */}
+      <div ref={bottomRef} />
     </div>
   );
 }

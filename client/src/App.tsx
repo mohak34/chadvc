@@ -130,7 +130,7 @@ function App() {
           </button>
         </header>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden flex flex-col">
           <MessageList />
         </div>
 

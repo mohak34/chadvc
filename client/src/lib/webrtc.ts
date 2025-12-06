@@ -73,7 +73,10 @@ export class WebRTCManager {
       }
     } catch (error) {
       console.error("Failed to get microphone access:", error);
-      throw new Error("Microphone access denied");
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        throw new Error("Microphone access denied. On Linux, please check system settings or install 'pavucontrol' to unmute input.");
+      }
+      throw new Error("Microphone access failed");
     }
   }
 
