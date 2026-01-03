@@ -98,7 +98,9 @@ export class WebSocketManager {
 
     const sessionId = getSessionId();
     const wsUrl = `${url}?token=${encodeURIComponent(token)}&session_id=${encodeURIComponent(sessionId)}`;
-    console.log(`[WebSocket] Connecting with session: ${sessionId.substring(0, 8)}...`);
+    console.log(
+      `[WebSocket] Connecting with session: ${sessionId.substring(0, 8)}...`,
+    );
 
     this.connectionPromise = new Promise((resolve, reject) => {
       this.connectionResolve = resolve;
@@ -152,7 +154,9 @@ export class WebSocketManager {
 
       this.ws.onclose = async (event) => {
         clearTimeout(connectionTimeout);
-        console.log(`[WebSocket] Disconnected (code: ${event.code}, reason: ${event.reason})`);
+        console.log(
+          `[WebSocket] Disconnected (code: ${event.code}, reason: ${event.reason})`,
+        );
         this.ws = null;
         this.connectionPromise = null;
         this.connectionResolve = null;
@@ -165,8 +169,14 @@ export class WebSocketManager {
         }
 
         // Check if disconnected due to token expiry
-        if (event.code === 1008 || event.reason?.includes("expired") || event.code === 4001) {
-          console.log("[WebSocket] Token may have expired, attempting refresh...");
+        if (
+          event.code === 1008 ||
+          event.reason?.includes("expired") ||
+          event.code === 4001
+        ) {
+          console.log(
+            "[WebSocket] Token may have expired, attempting refresh...",
+          );
           if (this.tokenRefreshHandler) {
             const newToken = await this.tokenRefreshHandler();
             if (newToken) {
@@ -184,7 +194,9 @@ export class WebSocketManager {
 
         // Check for session conflict (409)
         if (event.code === 4009) {
-          console.log("[WebSocket] Session conflict - this tab may have reconnected elsewhere");
+          console.log(
+            "[WebSocket] Session conflict - this tab may have reconnected elsewhere",
+          );
           return;
         }
 
@@ -306,7 +318,27 @@ export class WebSocketManager {
   }
 
   sendVoiceSignal(toUser: string, signal: any, toSessionId?: string) {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7242/ingest/e39950e9-9105-4203-a4e8-2cda83768eed",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "websocket.ts:308",
+            message: "sendVoiceSignal - WS not open",
+            data: { toUser, readyState: this.ws?.readyState },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "B",
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
+      return;
+    }
 
     const message: Message = {
       type: "voice_signal",
@@ -315,16 +347,66 @@ export class WebSocketManager {
       to_session_id: toSessionId,
     };
 
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/e39950e9-9105-4203-a4e8-2cda83768eed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "websocket.ts:318",
+        message: "Sending voice_signal",
+        data: { toUser, toSessionId, signalType: signal.type },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "B",
+      }),
+    }).catch(() => {});
+    // #endregion
     this.ws.send(JSON.stringify(message));
   }
 
   sendVoiceJoin() {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7242/ingest/e39950e9-9105-4203-a4e8-2cda83768eed",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "websocket.ts:321",
+            message: "sendVoiceJoin - WS not open",
+            data: { readyState: this.ws?.readyState },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run1",
+            hypothesisId: "A",
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
+      return;
+    }
 
     const message: Message = {
       type: "voice_join",
     };
 
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/e39950e9-9105-4203-a4e8-2cda83768eed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "websocket.ts:329",
+        message: "Sending voice_join",
+        data: {},
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "run1",
+        hypothesisId: "A",
+      }),
+    }).catch(() => {});
+    // #endregion
     this.ws.send(JSON.stringify(message));
   }
 
@@ -396,11 +478,14 @@ export class WebSocketManager {
 
     // Exponential backoff with jitter
     const delay = Math.min(
-      this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts - 1) + Math.random() * 1000,
-      this.maxReconnectDelay
+      this.baseReconnectDelay * Math.pow(2, this.reconnectAttempts - 1) +
+        Math.random() * 1000,
+      this.maxReconnectDelay,
     );
 
-    console.log(`[WebSocket] Attempting to reconnect in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+    console.log(
+      `[WebSocket] Attempting to reconnect in ${Math.round(delay)}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
+    );
 
     this.reconnectTimeout = setTimeout(async () => {
       if (this.token && !this.isIntentionalDisconnect) {

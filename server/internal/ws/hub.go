@@ -368,3 +368,15 @@ func (h *Hub) GetVoiceSessionID(username string) string {
 
 	return h.voiceSessions[username]
 }
+
+// GetVoiceUsers returns a list of usernames currently in voice
+func (h *Hub) GetVoiceUsers() []string {
+	h.voiceMu.RLock()
+	defer h.voiceMu.RUnlock()
+
+	users := make([]string, 0, len(h.voiceSessions))
+	for username := range h.voiceSessions {
+		users = append(users, username)
+	}
+	return users
+}

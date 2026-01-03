@@ -46,8 +46,8 @@ export default function VoiceControls() {
     setKickReason(null);
 
     try {
-      const voiceUsers = webrtcManager.getVoiceUsers();
-      await webrtcManager.joinVoiceChannel(voiceUsers);
+      // The server will send us the list of voice users after we join
+      await webrtcManager.joinVoiceChannel([]);
       useVoiceStore.getState().setInVoiceChannel(true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to join voice channel";
