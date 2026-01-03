@@ -1,65 +1,41 @@
-# ChadVC - Lightweight Discord Clone
+# ChadVC
 
-A lightweight Discord alternative built with Tauri, React, and Go.
+A lightweight Discord-like chat app with text and voice support.
 
-## Project Structure
+## What is this?
 
-```
-chadvc/
-├── client/              # Tauri + React frontend (to be created)
-├── server/              # Go backend
-│   ├── cmd/            # Entry point
-│   ├── internal/
-│   │   ├── api/        # REST API handlers
-│   │   ├── ws/         # WebSocket hub and handlers
-│   │   ├── webrtc/     # WebRTC signaling
-│   │   ├── models/     # Data models
-│   │   ├── db/         # Database connection (Prisma/Drizzle TBD)
-│   │   ├── middleware/ # Auth, CORS, rate limiting
-│   │   └── utils/      # Helper functions
-└── docs/               # Documentation
-```
-
-## Features (MVP)
-
-- Real-time text chat (WebSocket)
-- P2P voice chat (WebRTC)
-- Database persistence (Prisma/Drizzle - TBD)
-- Low latency (<100ms for India users)
+ChadVC is a simple real-time communication app built with Tauri (React frontend) and Go (backend). It supports text chat via WebSocket and peer-to-peer voice chat via WebRTC.
 
 ## Tech Stack
 
-### Frontend
-- Tauri 1.5+
-- React 18 + TypeScript
-- TailwindCSS + shadcn/ui
-- simple-peer (WebRTC)
-- Zustand (state management)
+- **Frontend**: Tauri 2.x, React 19, TypeScript, TailwindCSS, Zustand
+- **Backend**: Go, Gin, gorilla/websocket, GORM, PostgreSQL
+- **Voice**: WebRTC using simple-peer
 
-### Backend
-- Go 1.21+
-- Gin (web framework)
-- gorilla/websocket
-- pion/webrtc
-- PostgreSQL (database)
-- Redis (cache)
+## Known Limitations
 
-### Infrastructure
-- Oracle Cloud Free Tier (Germany)
-- 1GB RAM, 1 OCPU AMD
-- Let's Encrypt SSL
+**WebRTC does not work on Linux with Tauri.** The WebKitGTK backend used by Tauri on Linux does not support WebRTC. Voice chat will only work on Windows and macOS.
 
-## Getting Started
+To properly support voice on Linux, the WebRTC implementation needs to be moved to Rust using a native WebRTC client library (like `webrtc-rs`) instead of relying on the browser's WebRTC API. This is planned for a future update.
 
-Coming soon...
+## Running
 
-## Development Roadmap
+**Backend:**
+```bash
+cd server
+go run cmd/main.go
+```
 
-- [ ] Day 1-2: Text chat + Voice chat MVP
-- [ ] Week 1: Add database persistence
-- [ ] Week 2: Add authentication
-- [ ] Week 3: Add file uploads
-- [ ] Week 4: Polish and deploy
+**Frontend:**
+```bash
+cd client
+bun run tauri dev
+```
+
+For Nvidia systems with WebKitGTK issues:
+```bash
+WEBKIT_DISABLE_DMABUF_RENDERER=1 bun run tauri dev
+```
 
 ## License
 
