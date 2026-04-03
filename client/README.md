@@ -1,7 +1,10 @@
-# Tauri + Vanilla
+# ChadVC Client
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Javascript.
+Desktop client built with Electron, Svelte 5, TypeScript, and TailwindCSS v4.
 
-## Recommended IDE Setup
+## Commands
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+- `bun run dev` - run web renderer only
+- `bun run electron:dev` - run desktop app in development
+- `bun run build` - build renderer
+- `bun run electron:build` - build packaged desktop app

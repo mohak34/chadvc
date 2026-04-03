@@ -4,19 +4,17 @@ A lightweight Discord-like chat app with text and voice support.
 
 ## What is this?
 
-ChadVC is a simple real-time communication app built with Tauri (React frontend) and Go (backend). It supports text chat via WebSocket and peer-to-peer voice chat via WebRTC.
+ChadVC is a simple real-time communication app built with Electron + Svelte (frontend) and Go (backend). It supports text chat via WebSocket and peer-to-peer voice chat via WebRTC.
 
 ## Tech Stack
 
-- **Frontend**: Tauri 2.x, React 19, TypeScript, TailwindCSS, Zustand
+- **Frontend**: Electron, Svelte 5, TypeScript, TailwindCSS v4
 - **Backend**: Go, Gin, gorilla/websocket, GORM, PostgreSQL
 - **Voice**: WebRTC using simple-peer
 
-## Known Limitations
+## Why Electron
 
-**WebRTC does not work on Linux with Tauri.** The WebKitGTK backend used by Tauri on Linux does not support WebRTC. Voice chat will only work on Windows and macOS.
-
-To properly support voice on Linux, the WebRTC implementation needs to be moved to Rust using a native WebRTC client library (like `webrtc-rs`) instead of relying on the browser's WebRTC API. This is planned for a future update.
+The desktop client was migrated from Tauri to Electron to get full Chromium WebRTC support on Linux while keeping low runtime overhead through a minimal main process, strict window security settings, and an optimized renderer.
 
 ## Running
 
@@ -29,12 +27,13 @@ go run cmd/main.go
 **Frontend:**
 ```bash
 cd client
-bun run tauri dev
+bun run electron:dev
 ```
 
-For Nvidia systems with WebKitGTK issues:
+## Build
+
 ```bash
-WEBKIT_DISABLE_DMABUF_RENDERER=1 bun run tauri dev
+bun run electron:build
 ```
 
 ## License

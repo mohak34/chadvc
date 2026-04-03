@@ -4,15 +4,14 @@
 - **Go Backend**: `cd server && go run cmd/main.go` (dev), `go build -o chadvc cmd/main.go` (prod)
 - **Go Tests**: `go test ./...` (all), `go test -v ./internal/ws` (single package), `go test -v -run TestFunctionName` (single test)
 - **Go Coverage**: `go test -cover ./...` or `go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out`
-- **Frontend**: `cd client && bun run tauri dev` (dev), `bun run tauri build` (prod)
-- **Frontend (Nvidia)**: `cd client && WEBKIT_DISABLE_DMABUF_RENDERER=1 bun run tauri dev` (for Nvidia systems with WebKitGTK issues)
+- **Frontend**: `cd client && bun run electron:dev` (dev), `bun run electron:build` (prod)
 - **Lint**: `golangci-lint run` (Go backend in server/), `bun run lint` (frontend if configured)
 - **IMPORTANT**: Use `bun` for all frontend package management and scripts, NOT npm or node
 - **DO NOT RUN**: Do not run dev servers, build commands, or the app until explicitly requested by the user
 
 ## Tech Stack
 - **Backend**: Go 1.25+, Gin framework, gorilla/websocket, GORM + PostgreSQL
-- **Frontend**: Tauri 2.x, React 19, TypeScript (strict mode), TailwindCSS v4, Zustand, simple-peer
+- **Frontend**: Electron, Svelte 5, TypeScript (strict mode), TailwindCSS v4, simple-peer
 - **Database**: PostgreSQL with GORM (decision finalized, no Prisma/Drizzle)
 
 ## Go Code Style
@@ -26,14 +25,14 @@
 - **Comments**: Package-level godoc, exported functions/types documented starting with name
 - **Logging**: Use `log.Printf()` with descriptive context (usernames, IDs, state changes)
 
-## TypeScript/React Code Style
-- **Components**: Functional components only, default export, PascalCase naming, hooks at top
+## TypeScript/Svelte Code Style
+- **Components**: Svelte components in PascalCase, keep script logic typed and minimal
 - **Types**: Interfaces for props/state/objects, type aliases for unions/functions
 - **Naming**: camelCase (vars/functions), PascalCase (components/interfaces), SCREAMING_SNAKE_CASE (constants)
 - **Booleans**: Prefix with `is`, `has`, `show` (e.g., `isConnected`, `hasMessages`, `showBanner`)
 - **Handlers**: Prefix with `handle` (e.g., `handleSubmit`, `handleClick`)
-- **Imports**: React first, then external libs, then internal (stores/lib/components), no blank lines between groups
-- **State**: Zustand for global state with persist middleware, useState for local component state
+- **Imports**: external libs first, then internal (stores/lib/components), no blank lines between groups
+- **State**: Svelte stores for global state, local reactive state for component-level state
 - **Errors**: Try-catch with typed checks: `error instanceof Error ? error.message : "fallback"`
 - **Patterns**: Use optional chaining (`user?.name`), nullish coalescing (`value ?? default`), early returns, async/await
 
@@ -44,8 +43,8 @@
 ## Project Structure
 - `server/cmd/main.go`: Entry point only, no business logic here
 - `server/internal/*`: All implementation (api, ws, models, db, middleware, auth, utils)
-- `client/src/`: React components, stores (Zustand), lib utilities
-- `client/src-tauri/`: Rust/Tauri backend for desktop app
+- `client/src/`: Svelte components, stores, lib utilities
+- `client/electron/`: Electron main and preload process files
 
 ## General Rules
 - **No Emojis**: Do not use emojis in code, comments, or commit messages

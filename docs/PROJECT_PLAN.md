@@ -2,11 +2,11 @@
 
 ## Tech Stack Final Decision
 
-### Frontend (Tauri Desktop App)
-- **Framework**: Tauri v1.5+
-- **UI**: React 18 + TypeScript
+### Frontend (Electron Desktop App)
+- **Framework**: Electron + Chromium
+- **UI**: Svelte 5 + TypeScript
 - **Styling**: TailwindCSS + shadcn/ui
-- **State**: Zustand
+- **State**: Svelte stores
 - **WebRTC**: simple-peer
 - **WebSocket**: Native WebSocket API
 - **HTTP**: Axios or Fetch
@@ -106,7 +106,7 @@ Can always migrate to Prisma later if needed.
 
 ## Expected Performance
 
-**Client (Tauri)**:
+**Client (Electron + Svelte)**:
 - Memory: 50-150MB
 - CPU: 5-10% (voice)
 - Latency: 10-40ms (voice)
@@ -120,7 +120,7 @@ Can always migrate to Prisma later if needed.
 
 1. ✓ Create project structure
 2. Set up Go server with WebSocket
-3. Set up Tauri app with React
+3. Set up Electron app with Svelte
 4. Implement text chat
 5. Implement voice chat
 6. Decide on database (GORM recommended)

@@ -1,30 +1,22 @@
 # Client Setup
 
-## Create Tauri App
-
-```bash
-cd client
-npm create tauri-app
-# Choose: React, TypeScript, npm
-```
-
 ## Install Dependencies
 
 ```bash
-npm install simple-peer zustand axios
-npm install -D tailwindcss postcss autoprefixer
+cd client
+bun install
 ```
 
 ## Running the Client
 
 ```bash
-npm run tauri dev
+bun run electron:dev
 ```
 
 ## Building for Production
 
 ```bash
-npm run tauri build
+bun run electron:build
 ```
 
-This will create `.deb` and `.AppImage` files in `src-tauri/target/release/bundle/`
+Build artifacts are produced by Electron Builder in the configured output directory.

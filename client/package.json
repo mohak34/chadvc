@@ -3,33 +3,50 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "vite --mode web",
+    "electron:dev": "vite --mode electron",
+    "build": "svelte-check --tsconfig ./tsconfig.json && vite build --mode web",
+    "electron:build": "svelte-check --tsconfig ./tsconfig.json && vite build --mode electron && electron-builder",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@tsconfig/svelte": "^5.0.5",
     "@tailwindcss/postcss": "^4.1.17",
-    "@tauri-apps/cli": "^2",
-    "@types/react": "^19.2.6",
-    "@types/react-dom": "^19.2.3",
     "@types/simple-peer": "^9.11.9",
-    "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.22",
+    "electron": "^37.5.1",
+    "electron-builder": "^26.0.12",
     "postcss": "^8.5.6",
+    "svelte": "^5.39.7",
+    "svelte-check": "^4.3.1",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
+    "vite-plugin-electron": "^0.29.0",
     "vite-plugin-node-polyfills": "^0.24.0"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.9.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "simple-peer": "^9.11.1",
-    "zustand": "^5.0.8"
+    "simple-peer": "^9.11.1"
+  },
+  "build": {
+    "appId": "com.chadvc.app",
+    "productName": "ChadVC",
+    "asar": true,
+    "compression": "maximum",
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Network"
+    }
   }
 }

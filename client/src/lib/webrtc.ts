@@ -1,5 +1,6 @@
 import SimplePeer from "simple-peer";
-import { wsManager, Message } from "./websocket";
+import { wsManager } from "./websocket";
+import type { Message } from "./websocket";
 
 export type ConnectionState = "connecting" | "connected" | "failed" | "disconnected";
 

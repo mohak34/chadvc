@@ -44,12 +44,9 @@ logs/
 # Node.js / Frontend
 node_modules/
 dist/
+dist-electron/
 dist-ssr/
 *.local
-
-# Tauri
-client/**/target/
-client/**/WixTools/
 
 # Build outputs
 *.deb
