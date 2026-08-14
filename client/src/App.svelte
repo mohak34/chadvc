@@ -220,26 +220,30 @@
 </script>
 
 {#if isInitializing || $authState.isValidating}
-  <div class="min-h-screen bg-chad-bg-darkest flex items-center justify-center">
-    <div class="text-chad-muted">Loading...</div>
+  <div class="h-screen w-screen bg-chad-bg-darkest flex items-center justify-center" style="-webkit-app-region: drag;">
+    <div class="text-chad-text-muted">Loading...</div>
   </div>
 {:else if !$authState.isAuthenticated}
   <LoginForm />
 {:else}
-  <div class="flex flex-col h-screen bg-chad-bg-darkest text-chad-platinum">
+  <div class="flex flex-col h-screen w-screen bg-chad-bg-darkest text-chad-text-primary overflow-hidden">
+    <!-- Draggable Custom Titlebar -->
+    <div class="h-8 shrink-0 bg-chad-bg flex items-center px-4 justify-center border-b border-chad-border" style="-webkit-app-region: drag; -webkit-user-select: none;">
+      <span class="text-[11px] font-semibold text-chad-text-muted tracking-widest uppercase">ChadVC</span>
+    </div>
+
     {#if $chatState.showConnectionBanner}
       <ConnectionBanner onReconnect={handleReconnect} />
     {/if}
 
     <div class="flex flex-1 overflow-hidden">
-      <aside class="w-60 bg-chad-bg-dark flex flex-col border-r border-chad-border">
-        <div class="px-4 py-3 border-b border-chad-border flex items-center gap-2">
-          <div class="flex-1">
-            <h1 class="text-base font-semibold text-chad-platinum">ChadVC</h1>
-          </div>
+      <!-- Left Sidebar -->
+      <aside class="w-64 bg-chad-bg flex flex-col border-r border-chad-border shrink-0">
+        <div class="h-12 px-4 border-b border-chad-border flex items-center justify-between shrink-0">
+          <h1 class="text-[15px] font-bold text-chad-text-primary tracking-tight">ChadVC Server</h1>
           <div
             class={`w-2 h-2 rounded-full ${
-              $chatState.isConnected ? "bg-green-500" : "bg-red-500 animate-pulse"
+              $chatState.isConnected ? "bg-emerald-500" : "bg-red-500 animate-pulse"
             }`}
             title={$chatState.isConnected ? "Connected" : "Disconnected"}
           ></div>
@@ -249,49 +253,45 @@
           <VoiceControls />
         </div>
 
-        <div class="p-3 bg-chad-bg-darkest border-t border-chad-border">
+        <div class="p-4 bg-chad-bg border-t border-chad-border shrink-0">
           <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-chad-lavender flex items-center justify-center text-sm font-medium text-chad-platinum">
+            <div class="w-9 h-9 rounded-full bg-chad-bg-light border border-chad-border flex items-center justify-center text-sm font-semibold text-chad-text-primary">
               {currentUserInitial}
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-chad-platinum truncate">{$authState.user?.username}</p>
-              <p class={`text-xs ${$chatState.isConnected ? "text-green-500" : "text-red-400"}`}>
+            <div class="flex-1 min-w-0 flex flex-col justify-center">
+              <p class="text-[13px] font-semibold text-chad-text-primary truncate">{$authState.user?.username}</p>
+              <p class={`text-[11px] font-medium ${$chatState.isConnected ? "text-emerald-500" : "text-red-400"}`}>
                 {$chatState.isConnected ? "Online" : "Offline"}
               </p>
             </div>
             <button
               on:click={handleLogout}
-              class="p-2 hover:bg-chad-bg-hover rounded text-chad-muted hover:text-chad-platinum transition-colors"
+              class="p-2 hover:bg-chad-bg-hover rounded-md text-chad-text-muted hover:text-chad-text-primary transition-colors"
               title="Logout"
             >
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </button>
           </div>
         </div>
       </aside>
 
-      <main class="flex-1 flex flex-col bg-chad-bg-dark">
-        <header class="h-12 px-4 flex items-center border-b border-chad-border bg-chad-bg-dark">
-          <span class="text-chad-muted mr-2">#</span>
-          <span class="font-semibold text-chad-platinum">general</span>
+      <!-- Main Chat Area -->
+      <main class="flex-1 flex flex-col bg-chad-bg-darkest min-w-0">
+        <header class="h-12 px-6 flex items-center border-b border-chad-border bg-chad-bg-dark shrink-0">
+          <span class="text-chad-text-muted text-lg mr-3 font-light">#</span>
+          <span class="font-semibold text-[15px] text-chad-text-primary tracking-tight">general</span>
         </header>
 
-        <div class="flex-1 overflow-hidden flex flex-col">
+        <div class="flex-1 overflow-hidden flex flex-col relative">
           <MessageList />
+          <MessageInput />
         </div>
-
-        <MessageInput />
       </main>
 
-      <aside class="w-60 bg-chad-bg-dark border-l border-chad-border flex flex-col">
+      <!-- Right Sidebar -->
+      <aside class="w-60 bg-chad-bg border-l border-chad-border flex flex-col shrink-0">
         <UserList />
       </aside>
     </div>

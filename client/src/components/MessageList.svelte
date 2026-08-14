@@ -135,7 +135,7 @@
   {/if}
 
   {#if $chatState.messages.length === 0 && !$chatState.isLoadingMore}
-    <div class="flex items-center justify-center h-full text-chad-muted">No messages yet. Start the conversation!</div>
+    <div class="flex items-center justify-center h-full text-chad-text-muted text-sm font-medium tracking-wide">No messages yet. Start the conversation!</div>
   {:else}
     {#each $chatState.messages as message, index (message.id)}
       {@const previousMessage = index > 0 ? $chatState.messages[index - 1] : null}
@@ -143,35 +143,38 @@
       {@const isSystem = message.username === "System"}
 
       {#if isSystem}
-        <div class="py-1 px-4 text-center">
-          <span class="text-xs text-chad-muted">{message.content}</span>
-          <span class="text-xs text-chad-muted ml-2">{formatTimestamp(message.timestamp)}</span>
+        <div class="py-2 px-4 text-center my-2 flex items-center justify-center">
+          <div class="h-px bg-chad-border flex-1 mx-4 max-w-[100px]"></div>
+          <span class="text-[11px] font-semibold tracking-wider text-chad-text-muted uppercase">
+            {message.content} <span class="ml-2 font-normal text-chad-text-muted/60">{formatTimestamp(message.timestamp)}</span>
+          </span>
+          <div class="h-px bg-chad-border flex-1 mx-4 max-w-[100px]"></div>
         </div>
       {:else}
-        <div class={`group flex gap-4 py-0.5 px-2 hover:bg-chad-bg-hover rounded ${showHeader ? "mt-4" : ""}`}>
-          <div class="w-10 flex-shrink-0">
+        <div class={`group flex gap-4 py-0 px-4 hover:bg-chad-bg-hover rounded-md transition-colors ${showHeader ? "mt-4" : "mt-0"}`}>
+          <div class="w-10 flex-shrink-0 flex justify-end">
             {#if showHeader}
               <div
-                class={`w-10 h-10 rounded-full ${getAvatarColor(message.username)} flex items-center justify-center text-sm font-medium text-white`}
+                class={`w-10 h-10 rounded-full bg-[var(--color-${getAvatarColor(message.username).replace('bg-', '')})] flex items-center justify-center text-sm font-bold text-white shadow-sm`}
               >
                 {getAvatarInitial(message.username)}
               </div>
             {/if}
           </div>
 
-          <div class="flex-1 min-w-0">
+          <div class="flex-1 min-w-0 pt-[2px]">
             {#if showHeader}
-              <div class="flex items-baseline gap-2">
-                <span class="font-medium text-chad-steel hover:underline cursor-pointer">{message.username}</span>
-                <span class="text-xs text-chad-muted">{formatTimestamp(message.timestamp)}</span>
+              <div class="flex items-baseline gap-2 mb-0">
+                <span class="text-[17px] font-bold text-chad-text-primary hover:underline cursor-pointer">{message.username}</span>
+                <span class="text-[11px] font-medium text-chad-text-muted">{formatTimestamp(message.timestamp)}</span>
               </div>
             {/if}
-            <div class="text-chad-platinum leading-relaxed break-words">{message.content}</div>
+            <div class="text-[17px] text-chad-text-primary/90 leading-tight break-words whitespace-pre-wrap">{message.content}</div>
           </div>
         </div>
       {/if}
     {/each}
   {/if}
 
-  <div bind:this={bottomRef}></div>
+  <div bind:this={bottomRef} class="h-4"></div>
 </div>
